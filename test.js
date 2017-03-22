@@ -19,7 +19,7 @@ describe("healthful", function () {
 })
 
 
-describe("Healthful", function (done) {
+describe("HTTP", function () {
     var health
     var req
 
@@ -34,7 +34,7 @@ describe("Healthful", function (done) {
 
     after(function (done) {
         if (!health) return done()
-        health.server.close(done)
+        health.close(done)
         health = null
     })
 
@@ -78,3 +78,53 @@ describe("Healthful", function (done) {
     })
 })
 
+
+describe("StatsD", function () {
+    var health
+    var client
+    var req
+
+    before(function () {
+        health = new lib.Healthful({
+            service: 'mocha',
+            statsd: true,
+            interval: 10,
+        })
+
+        client = {
+            args: [],
+            count: function () {
+                client.args.push(Array.prototype.slice.call(arguments))
+            },
+            orig: health.statsd_client
+        }
+
+        health.statsd_client = client
+    })
+
+    after(function (done) {
+        if (!health) return done()
+        health.close(done)
+        health = null
+    })
+
+    it("works", function () {
+        assert(health, "Healthful instance not created")
+    })
+
+    it("generates a healthy ping", function () {
+        health.ping()
+        assert(JSON.stringify(health.statsd_client.args) ==
+            JSON.stringify([['mocha.healthy', 1]]),
+            "StatsD got wrong arguments")
+    })
+
+    it("generates an unhealthy timeout", function (done) {
+        setTimeout(function () {
+            assert(JSON.stringify(health.statsd_client.args) ==
+                JSON.stringify([['mocha.healthy', 1], ['mocha.unhealthy', 1]]),
+                "StatsD got wrong arguments")
+            done()
+        }, health.interval)
+    })
+})
