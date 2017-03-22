@@ -54,9 +54,43 @@ Healthful.prototype.init = function Healthful_init () {
 
 
 /**
+ * Clean up listeners and so forth.
+ */
+Healthful.prototype.close = function Healthful_close (callback) {
+    // End health ping interval if we have one
+    clearInterval(this._timeout)
+
+    if (this.statsd_client) {
+        if (this.statsd_client.sock) {
+            // Close our end of the socket
+            // XXX: This only works for UDP, if we support TCP this needs to
+            // use .end() in that variant
+            this.statsd_client.sock.close()
+        }
+        // Clean up our client so we don't try to send more
+        this.statsd_client = null
+    }
+
+    // If we have a server, call it and end
+    if (this.server) {
+        this.server.close(callback)
+        this.server = null
+        return
+    }
+
+    // Check if callback is a function, and call it
+    if (!!(callback && callback.constructor && callback.call
+        && callback.apply)) {
+        callback()
+    }
+}
+
+
+/**
  * Initialize Http check
  */
 Healthful.prototype.initHttp = function Healthful_initHttp () {
+    this.debug("Initializing HTTP listener")
     assert(this.http, "HTTP listener improperly configured")
 
     // Allow for enable http with all defaults by specifying `true`
@@ -134,15 +168,11 @@ Healthful.prototype.handleRequest = function Healthful_handleRequest (req, res) 
  * Get StatsD going.
  */
 Healthful.prototype.initStatsd = function Healthful_initStatsd () {
-    var Statsy
-    // Handle if we don't have the optional statsy package installed
-    try {
-        Statsy = require('statsy')
-    }
-    catch (err) {
-        this.debug("StatsD not available: statsy package is not installed")
-        return
-    }
+    this.debug("Initializing StatsD client")
+    assert(this.statsd, "StatsD improperly configured")
+
+    // Handle the defaults setup
+    if (this.statsd === true) this.statsd = {}
 
     // Default the statsd host to localhost
     if (!this.statsd.host) this.statsd.host = (
@@ -160,13 +190,20 @@ Healthful.prototype.initStatsd = function Healthful_initStatsd () {
     assert(typeof this.statsd.prefix == 'string', "StatsD prefix is not string")
 
     // Create the new statsd client
-    this.statsd_client = new Statsy({
+    this.statsd_client = exports.getStatsdClient({
         host: this.statsd.host,
         port: this.statsd.port,
         prefix: this.statsd.prefix,
     })
-}
 
+    if (!this.statsd_client) {
+        this.debug("StatsD not available: statsy package is not installed")
+    }
+    else if (this.statsd_client.sock) {
+        // Make sure it never hangs around
+        this.statsd_client.sock.unref()
+    }
+}
 
 /**
  * Register a healthy state.
@@ -202,7 +239,9 @@ Healthful.prototype.ping = function Healthful_ping () {
  */
 Healthful.prototype.pingStatsd = function Healthful_pingStatsd () {
     if (!this.statsd_client) {
-        this.debug("Statsd ping unavailable")
+        if (this.statsd) {
+            this.debug("Statsd ping unavailable")
+        }
         return
     }
 
@@ -217,3 +256,15 @@ Healthful.prototype.pingStatsd = function Healthful_pingStatsd () {
 }
 
 
+exports.getStatsdClient = function getStatsdClient (opt) {
+    var Statsy
+    // Handle if we don't have the optional statsy package installed
+    try {
+        Statsy = require('statsy')
+    }
+    catch (err) {
+        return null
+    }
+
+    return new Statsy(opt)
+}
