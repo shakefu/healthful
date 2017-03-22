@@ -27,6 +27,10 @@ const health = new require('healthful')({service: 'example', http: true})
 health.ping()
 ```
 
+## Environment
+
+*TODO: Document env vars*
+
 ## API
 
 *TODO: Api docs*
