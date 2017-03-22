@@ -10,3 +10,17 @@ stats traffic that might be monitored for health.
 ```
 yarn install healthful
 ```
+
+Or `npm install --save healthful` if you're not cool.
+
+## Usage
+
+*TODO: Better docs*
+
+```
+const health = require('healthful')({service: 'example', http: true})
+
+// Some repeating code that you can count on
+health.ping()
+```
+
