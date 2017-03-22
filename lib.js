@@ -246,9 +246,12 @@ Healthful.prototype.pingStatsd = function Healthful_pingStatsd () {
     }
 
     var healthy = '.' + (this.healthy ? '' : 'un') + 'healthy'
+    healthy = this.service + healthy
+
+    this.debug("StatsD: " + this.statsd.prefix + '.' + healthy + " 1")
 
     try {
-        this.statsd_client.count(this.service + healthy, 1)
+        this.statsd_client.count(healthy, 1)
     }
     catch (err) {
         this.debug("Error:" + err)
