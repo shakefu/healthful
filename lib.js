@@ -16,7 +16,7 @@ function Healthful (opt) {
     this.service = opt.service
     this.statsd = opt.statsd || null
     this.http = opt.http || null
-    this.interval = opt.interval || 60*1000
+    this.interval = opt.interval || process.env.HEALTHFUL_INTERVAL || 60*1000
     this.healthy = false
 
     assert(this.service && this.service.length, "Service name is required")
