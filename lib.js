@@ -6,6 +6,9 @@
 var http = require('http')
 var assert = require('assert')
 
+// 3rd party
+var debug = require('debug')
+
 
 function Healthful (opt) {
     // Options object
@@ -21,7 +24,11 @@ function Healthful (opt) {
             "contain numbers, letters, underscores and dots.")
     assert(Number.isInteger(this.interval), "Check interval must be an integer")
 
+    // Set empty timeout handle
     this._timeout = null
+
+    // Create debug
+    this.debug = debug('healthful:' + this.service)
 
     this.init()
 }
@@ -32,13 +39,14 @@ exports.Healthful = Healthful
  * Initialize subclients and services.
  */
 Healthful.prototype.init = function Healthful_init () {
+    // Initialize HTTP listener or StatsD client.
     if (this.http) this.initHttp()
     if (this.statsd) this.initStatsd()
 
+    // Output helpful debug if this isn't doing anything
     if (!this.http && !this.statsd) {
         this.debug("Not initializing any healthcheck, not configured.")
     }
-
 }
 
 
@@ -147,16 +155,5 @@ Healthful.prototype.ping = function Healthful_ping () {
 
     // Unref the timeout so we don't cause hangs
     this._timeout.unref()
-}
-
-/**
- * Provide helpful debug output.
- */
-Healthful.prototype.debug = function Healthful_debug () {
-    // TODO: Filter this like the debug package
-    // TODO: Add timestamp and name and color (?)
-    var args = Array.prototype.slice.call(arguments)
-    args.unshift('healthful:' + this.service)
-    console.log.apply(console.log, args)
 }
 
