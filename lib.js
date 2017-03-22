@@ -24,6 +24,9 @@ function Healthful (opt) {
             "contain numbers, letters, underscores and dots.")
     assert(Number.isInteger(this.interval), "Check interval must be an integer")
 
+    // Set empty statsd client
+    this.statsd_client = null
+
     // Set empty timeout handle
     this._timeout = null
 
@@ -131,7 +134,37 @@ Healthful.prototype.handleRequest = function Healthful_handleRequest (req, res) 
  * Get StatsD going.
  */
 Healthful.prototype.initStatsd = function Healthful_initStatsd () {
-    this.debug("Not implemented.")
+    var Statsy
+    // Handle if we don't have the optional statsy package installed
+    try {
+        Statsy = require('statsy')
+    }
+    catch (err) {
+        this.debug("StatsD not available: statsy package is not installed")
+        return
+    }
+
+    // Default the statsd host to localhost
+    if (!this.statsd.host) this.statsd.host = (
+        process.env.HEALTHFUL_STATSD_HOST || 'localhost')
+    assert(typeof this.statsd.host == 'string', "StatsD host must be a string")
+
+    // Default the statsd port to 8125
+    if (!this.statsd.port) this.statsd.port = (
+        process.env.HEALTHFUL_STATSD_PORT || 8125)
+    assert(Number.isInteger(this.statsd.port), "StatsD port must be an integer")
+
+    // Default the prefix to "healthful"
+    if (!this.statsd.prefix) this.statsd.prefix = (
+        process.env.HEALTHFUL_STATSD_PORT || 'healthful')
+    assert(typeof this.statsd.prefix == 'string', "StatsD prefix is not string")
+
+    // Create the new statsd client
+    this.statsd_client = new Statsy({
+        host: this.statsd.host,
+        port: this.statsd.port,
+        prefix: this.statsd.prefix,
+    })
 }
 
 
@@ -142,18 +175,45 @@ Healthful.prototype.ping = function Healthful_ping () {
     this.debug("Ping")
 
     // Clear the previous timeout if it existed
-    if (this._timeout) clearTimeout(this._timeout)
+    if (this._timeout) clearInterval(this._timeout)
 
     // Update the healthy flag to be true
     this.healthy = true
 
+    // Send a healthy ping to StatsD as well, if it's enabled, etc.
+    this.pingStatsd()
+
     // Set the timeout to flip the healthy flag
-    this._timeout = setTimeout(function Healthful_unhealhty () {
-        this.debug("Ping timeout")
+    this._timeout = setInterval(function Healthful_unhealhty () {
+        this.debug("Health timeout")
         this.healthy = false
+
+        // Send an unhealthy ping to statsd
+        this.pingStatsd()
     }.bind(this), this.interval)
 
     // Unref the timeout so we don't cause hangs
     this._timeout.unref()
 }
+
+
+/**
+ * Sends a ping to StatsD
+ */
+Healthful.prototype.pingStatsd = function Healthful_pingStatsd () {
+    if (!this.statsd_client) {
+        this.debug("Statsd ping unavailable")
+        return
+    }
+
+    var healthy = '.' + (this.healthy ? '' : 'un') + 'healthy'
+
+    try {
+        this.statsd_client.count(this.service + healthy, 1)
+    }
+    catch (err) {
+        this.debug("Error:" + err)
+    }
+}
+
 
