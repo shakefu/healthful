@@ -74,7 +74,7 @@ Healthful.prototype.initHttp = function Healthful_initHttp () {
     assert(typeof this.http.content_type == 'string',
         "HTTP content type must be a string")
 
-    // Default the response to a JSON ok
+    // Default the response to a JSON template
     if (!this.http.response) this.http.response = (
         process.env.HEALTHFUL_RESPONSE ||
         '{"service": "{{service}}", "healthful": {{healthy}}}')
@@ -121,7 +121,7 @@ Healthful.prototype.getResponse = function Healthful_getResponse () {
 Healthful.prototype.handleRequest = function Healthful_handleRequest (req, res) {
     res.setHeader('Content-type', this.http.content_type)
     res.setHeader('X-Healthful', Date.now().toString())
-    res.writeHead(200)
+    res.writeHead(this.healthy ? 200 : 503)
     res.write(this.getResponse())
     res.end()
 }
