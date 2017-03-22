@@ -75,6 +75,5 @@ describe("Healthful", function (done) {
             .expect({service: 'mocha', healthful: false}, done)
         }, health.interval)
     })
-
 })
 
