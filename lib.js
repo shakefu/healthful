@@ -119,11 +119,17 @@ Healthful.prototype.handleRequest = function Healthful_handleRequest (req, res) 
 }
 
 
+/**
+ * Get StatsD going.
+ */
 Healthful.prototype.initStatsd = function Healthful_initStatsd () {
     this.debug("Not implemented.")
 }
 
 
+/**
+ * Register a healthy state.
+ */
 Healthful.prototype.ping = function Healthful_ping () {
     this.debug("Ping")
 
@@ -143,7 +149,9 @@ Healthful.prototype.ping = function Healthful_ping () {
     this._timeout.unref()
 }
 
-
+/**
+ * Provide helpful debug output.
+ */
 Healthful.prototype.debug = function Healthful_debug () {
     // TODO: Filter this like the debug package
     // TODO: Add timestamp and name and color (?)
