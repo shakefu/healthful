@@ -43,9 +43,9 @@ describe("Healthful", function (done) {
         assert(health.server, "Healthful server not created")
     })
 
-    it("responds with a 200", function (done) {
+    it("responds with a 503 if unhealthy", function (done) {
         req.get('/')
-        .expect(200, done)
+        .expect(503, done)
     })
 
     it("defaults to responding with JSON", function (done) {
@@ -60,12 +60,13 @@ describe("Healthful", function (done) {
 
     it("responds on any path", function (done) {
         req.get('/blah')
-        .expect(200, done)
+        .expect(503, done)
     })
 
     it("changes health status after a ping", function (done) {
         health.ping()
         req.get('/')
+        .expect(200)
         .expect({service: 'mocha', healthful: true}, done)
     })
 
