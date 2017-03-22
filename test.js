@@ -33,6 +33,7 @@ describe("Healthful", function (done) {
     })
 
     after(function (done) {
+        if (!health) return done()
         health.server.close(done)
         health = null
     })
